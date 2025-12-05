@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>آزمون شبیه‌سازی روماتولوژی</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background-color: #f3f4f6;
+            user-select: none; /* جلوگیری از کپی متن سوال در حین آزمون */
+        }
+        .option-btn {
+            transition: all 0.2s;
+        }
+        .option-btn:hover {
+            background-color: #eff6ff;
+            border-color: #3b82f6;
+        }
+        .option-btn.selected {
+            background-color: #eff6ff;
+            border-color: #2563eb;
+            color: #1e40af;
+            font-weight: bold;
+            box-shadow: 0 0 0 2px #bfdbfe;
+        }
+        /* استایل‌های مربوط به پاسخنامه */
+        .result-correct {
+            background-color: #dcfce7;
+            border: 1px solid #22c55e;
+            color: #14532d;
+        }
+        .result-wrong {
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #7f1d1d;
+        }
+        .result-missed {
+            background-color: #f3f4f6;
+            border: 1px solid #9ca3af;
+            color: #374151;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- کانتینر اصلی -->
+    <div class="bg-white w-full max-w-3xl rounded-2xl shadow-xl overflow-hidden flex flex-col" style="min-height: 600px;">
+        
+        <!-- هدر: تایمر و شماره سوال -->
+        <header class="bg-blue-600 text-white p-4 flex justify-between items-center shadow-md">
+            <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span id="timer" class="text-xl font-bold font-mono">10:00</span>
+            </div>
+            <div class="text-sm font-medium opacity-90">
+                سوال <span id="current-q-num">1</span> از <span id="total-q-num">18</span>
+            </div>
+        </header>
+
+        <!-- نوار پیشرفت -->
+        <div class="w-full bg-gray-200 h-1.5">
+            <div id="progress-bar" class="bg-blue-400 h-1.5 transition-all duration-300" style="width: 0%"></div>
+        </div>
+
+        <!-- صفحه شروع -->
+        <div id="start-screen" class="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
+            <div class="bg-blue-100 p-4 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800">آزمون جامع روماتولوژی</h1>
+            <p class="text-gray-600 leading-relaxed max-w-md">
+                این آزمون شامل <b>۱۸ سوال</b> چهارگزینه‌ای شبیه‌سازی شده است.
+                <br>
+                زمان آزمون: <b>۱۰ دقیقه</b>.
+                <br>
+                پس از پایان آزمون، کارنامه و پاسخ تشریحی نمایش داده خواهد شد.
+            </p>
+            <button onclick="startQuiz()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transform transition hover:-translate-y-1 active:translate-y-0">
+                شروع آزمون
+            </button>
+        </div>
+
+        <!-- کانتینر سوالات -->
+        <div id="quiz-container" class="hidden flex-1 flex flex-col p-6 md:p-8">
+            <div class="flex-1">
+                <h2 id="question-text" class="text-lg md:text-xl text-gray-800 font-medium leading-8 mb-8">
+                    <!-- متن سوال اینجا قرار می‌گیرد -->
+                </h2>
+                
+                <div id="options-container" class="space-y-3">
+                    <!-- گزینه‌ها اینجا رندر می‌شوند -->
+                </div>
+            </div>
+
+            <div class="mt-8 flex justify-end">
+                <button id="next-btn" onclick="nextQuestion()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-8 rounded-lg shadow transition-colors flex items-center gap-2">
+                    <span>سوال بعد</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transform rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- صفحه نتایج -->
+        <div id="result-screen" class="hidden flex-1 flex flex-col p-6 md:p-8 overflow-y-auto max-h-[80vh]">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">نتیجه آزمون</h2>
+                <div class="flex justify-center items-center gap-4 mt-4">
+                    <div class="text-center p-3 bg-blue-50 rounded-lg">
+                        <div class="text-sm text-gray-500">نمره کل</div>
+                        <div id="score-percentage" class="text-2xl font-bold text-blue-600">0%</div>
+                    </div>
+                    <div class="text-center p-3 bg-green-50 rounded-lg">
+                        <div class="text-sm text-gray-500">صحیح</div>
+                        <div id="score-correct" class="text-2xl font-bold text-green-600">0</div>
+                    </div>
+                    <div class="text-center p-3 bg-red-50 rounded-lg">
+                        <div class="text-sm text-gray-500">غلط/نزده</div>
+                        <div id="score-wrong" class="text-2xl font-bold text-red-600">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-gray-200 mb-6">
+            
+            <h3 class="text-xl font-bold text-gray-700 mb-4">پاسخنامه تشریحی:</h3>
+            <div id="review-container" class="space-y-6 pb-8">
+                <!-- لیست سوالات و جواب‌ها اینجا رندر می‌شود -->
+            </div>
+            
+            <div class="text-center pt-4 sticky bottom-0 bg-white border-t p-4">
+                <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow">
+                    آزمون مجدد
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // بانک سوالات (۱۸ سوال)
+        const questions = [
+            {
+                id: 1,
+                question: "خانم ۲۳ ساله‌ای به‌دلیل درد زانو به پزشک خانواده مراجعه کرده است. می‌گوید درد از دیروز شروع شده و به‌تدریج بدتر شده است. او به‌تازگی برای کاهش وزن به تیم والیبال ملحق شده و گزارش می‌کند که هنگام بازی مرتب روی زانوی خود می‌چرخد و پیچ می‌دهد. سابقه سندرم تخمدان پلی‌کیستیک دارد و قرص ضدبارداری مصرف می‌کند. دمای بدن ۳۶٫۹، فشار خون ۱۳۷/۸۸، نبض ۹۰، تنفس ۱۲ و اشباع O₂ برابر ۹۸٪ است. در معاینه، زنی چاق با پرمویی صورت دیده می‌شود. در لمس، در ناحیه داخلی استخوان درشت‌نی، کمی پایین‌تر از کشکک، حساسیت واضح وجود دارد. BMI=37 است و بقیه معاینه اندام تحتانی طبیعی است. محتمل‌ترین تشخیص کدام است؟",
+                options: ["پارگی لیگامان کولترال داخلی", "پارگی منیسک داخلی", "سندرم پاتلوفمورال", "بورسیت پس‌آنسرین (Pes anserine bursitis)"],
+                correct: 3
+            },
+            {
+                id: 2,
+                question: "خانم ۳۴ ساله‌ای به‌علت درد ۳ ماهه در شست و مچ دست راست که به آرنج انتشار دارد مراجعه کرده است. درد هنگام抱 کردن نوزادش بدتر شده و با گذاشتن یخ بهتر می‌شود. شش ماه قبل روی زمین خیس لیز خورده و روی دست راست افتاده است. مادرش برای درد مزمن مفاصل متوترکسات مصرف می‌کند. خود بیمار برای درد فعلی ایبوپروفن می‌خورد. در معاینه، روی زائده استیلوئید رادیوس دست راست، حساسیت و تورم بدون قرمزی دیده می‌شود. کریپیتاسیون وجود ندارد. گرفتن شست و کشیدن آن به سمت اولنار موجب درد می‌شود (تست فینکل‌اشتاین مثبت). دامنه حرکتی مفاصل انگشتان طبیعی است. محتمل‌ترین تشخیص کدام است؟",
+                options: ["استئوآرتریت", "تندوسینوویت دوکروون (De Quervain)", "سندرم تونل کارپ", "آرتریت روماتوئید"],
+                correct: 1
+            },
+            {
+                id: 3,
+                question: "خانم ۳۹ ساله‌ای به‌دلیل حملات مکرر درد شدید در گردن، پشت و شانه‌ها طی یک سال اخیر مراجعه کرده است. درد با ورزش و کم‌خوابی بدتر می‌شود و مسکن‌های بدون نسخه جواب نداده‌اند. سفتی شانه‌ها و زانوها و گزگز اندام فوقانی که صبح‌ها بدتر است نیز دارد. برای اضطراب فراگیر دارو مصرف می‌کند. دایی مادری‌اش مبتلا به اسپوندیلیت آنکیلوزان است. در معاینه، حساسیت واضح روی پشت گردن، قسمت میانی عضله تراپزیوس دوطرفه و سمت داخلی زانوی چپ وجود دارد. قدرت عضلانی طبیعی است. CBC، ESR و TSH نرمال هستند. گرافی گردن و کمر طبیعی است. محتمل‌ترین تشخیص کدام است؟",
+                options: ["پلی‌میالژی روماتیکا", "فیبرومیالژیا", "پلی‌میوزیت", "اختلال افسردگی اساسی"],
+                correct: 1
+            },
+            {
+                id: 4,
+                question: "خانم ۴۷ ساله‌ای به‌علت بدن‌درد طی ۹ ماه گذشته مراجعه کرده است. سفتی شانه‌ها و زانوها که صبح‌ها بدتر است و گزگز اندام فوقانی دارد. در معاینه، حساسیت واضح روی پشت گردن، قسمت میانی عضله تراپزیوس دوطرفه و سمت داخلی زانوی چپ دیده می‌شود. CBC و ESR در محدوده طبیعی‌اند. محتمل‌ترین تشخیص کدام است؟",
+                options: ["پلی‌میوزیت", "اختلال افسردگی اساسی", "فیبرومیالژیا", "آرتریت روماتوئید"],
+                correct: 2
+            },
+            {
+                id: 5,
+                question: "مرد ۴۵ ساله مبتلا به آسم به‌علت یک ماه تنگی‌نفس و سرفه پیشرونده مراجعه کرده است. سابقه سینوزیت مزمن و افتادگی پا (foot drop) دارد. داروها شامل اسپری سالبوتامول و کورتیکواستروئید استنشاقی است. در معاینه، ویزینگ منتشر دوطرفه در ریه‌ها و ندول‌های زیرجلدی حساس روی هر دو آرنج وجود دارد. آزمایش‌ها: لکوسیت ۲۳۰۰۰ با ۲۶٪ ائوزینوفیل، کراتینین سرم ۱٫۷. در میکروسکوپی ادرار، RBC cast دیده می‌شود. محتمل‌ترین تشخیص کدام است؟",
+                options: ["گرانولوماتوز همراه پلی‌آنژیت (GPA)", "گرانولوماتوز ائوزینوفیلیک همراه پلی‌آنژیت (EGPA)", "پلی‌آنژیت میکروسکوپیک (MPA)", "پلی‌آرتریت نودوزا (PAN)"],
+                correct: 1
+            },
+            {
+                id: 6,
+                question: "مرد ۶۰ ساله‌ای طی ۲ سال اخیر دچار درد متناوب در شست پای راست شده است. آرتروسنتز و آنالیز کریستال، کریستال‌های داخل سلولی باریک، سوزنی و نوک‌تیز با بیرفرنژانس منفی قوی نشان می‌دهد. رادیوگرافی، تنگی فضای مفصلی MTP اول با تورم بافت نرم داخلی را نشان می‌دهد. محتمل‌ترین علت این وضعیت کدام است؟",
+                options: ["رسوب کریستال‌های اورات منوسدیم", "رسوب کلسیم پیروفسفات", "عفونت سل", "آرتریت روماتوئید"],
+                correct: 0
+            },
+            {
+                id: 7,
+                question: "خانم ۶۸ ساله مبتلا به استئوآرتریت به‌دلیل ۲ روز درد و تورم زانوی راست مراجعه کرده است. دما ۳۷ درجه است. در معاینه، اریتم و تورم زانوی راست با دامنه حرکتی طبیعی دیده می‌شود. گرافی زانو نقاط رادیواُپک نقطه‌ای در هر دو منیسک و کپسول مفصلی نشان می‌دهد. آرتروسنتز مایع کدر با لکوسیت ۲۷۰۰۰ برمی‌گرداند. مکانیسم زمینه‌ای محتمل این درد زانو کدام است؟",
+                options: ["رسوب کریستال‌های کلسیم پیروفسفات دی‌هیدرات", "رسوب کمپلکس‌های ایمنی", "عفونت با دیپلوکوک‌های گرم‌منفی", "رسوب کریستال‌های اورات منوسدیم"],
+                correct: 0
+            },
+            {
+                id: 8,
+                question: "خانم ۲۹ ساله‌ای با شکایت درد و سفتی دست‌ها و زانوها مراجعه کرده است. سفتی صبح‌ها بدتر است و در طول روز بهتر می‌شود. در معاینه، مفاصل MCP و PIP متورم و اریتماتوز هستند و مفاصل DIP طبیعی به نظر می‌رسند. در حرکات فعال و پاسیو زانوهای دو طرف درد دارد. آزمایش سرولوژیک تیتر بالای آنتی‌بادی ضد CCP را نشان می‌دهد. کدام فرآیند پاتولوژیک، زمینه این بیماری است؟",
+                options: ["رسوب کریستال‌های اورات منوسدیم", "التهاب پس از عفونت سطوح مفصلی", "دژنراسیون دژنراتیو غضروف مفصلی", "هیپرتروفی سینوویوم و تشکیل پانوس"],
+                correct: 3
+            },
+            {
+                id: 9,
+                question: "بیماری که طی ۲ ماه اخیر دچار درد زانو و مچ همراه با خشکی صبحگاهی است که در طول روز بهتر می‌شود، در معاینه ندول‌های زیرجلدی دارد. در آزمایش‌ها: CRP بالا، Anti-CCP مثبت متوسط، ANA و RF منفی است. محتمل‌ترین زیرنوع HLA مرتبط با این بیماری کدام است؟",
+                options: ["HLA-DR4", "HLA-DR2", "HLA-DQ2", "HLA-B27"],
+                correct: 0
+            },
+            {
+                id: 10,
+                question: "خانم ۴۹ ساله‌ای به‌علت ۴ ماه خستگی و درد عودکننده در مچ‌ها و انگشتان مراجعه کرده است. حدود ۸۰ دقیقه خشکی صبحگاهی دارد. RF مثبت است. درمان با دارویی شروع می‌شود که سنتز دئوکسی‌تیمیدین مونوفسفات (dTMP) را کاهش می‌دهد. مکانیسم این دارو بیشترین شباهت را به کدام داروی زیر دارد؟",
+                options: ["۵-فلوئورواوراسیل", "آزاتیوپرین", "سیکلوفسفامید", "وین‌کریستین"],
+                correct: 0
+            },
+            {
+                id: 11,
+                question: "خانم ۵۵ ساله‌ای با درد و تورم مفاصل دست‌ها مراجعه کرده است. درد حدود یک ساعت پس از بیدار شدن طول می‌کشد. مادربزرگ و عمه‌اش RA داشته‌اند. سیگاری است. Anti-CCP=55 (نرمال<۲۰) است و CT استئوپنی و اروژن در MCPها نشان می‌دهد. متوترکسات شروع می‌شود. کدام یافته در مایع مفصلی محتمل‌تر است؟",
+                options: ["راگوسیت (Ragocytes)", "کریستال اورات منوسدیم", "کریستال کلسیم پیروفسفات", "لنفوسیت بالا"],
+                correct: 0
+            },
+            {
+                id: 12,
+                question: "خانم ۵۹ ساله‌ای به‌علت یک سال درد و سفتی انگشتان و زانوها مراجعه کرده است. سفتی حدود ۱۰ دقیقه بعد از بیدار شدن طول می‌کشد. درد زانو عصرها بدتر می‌شود. BMI=33 است. در معاینه، ندول‌های سفت روی مفاصل DIP انگشت اشاره، انگشت حلقه و انگشت کوچک هر دو دست دیده می‌شود. محتمل‌ترین تشخیص کدام است؟",
+                options: ["شبه‌نقرس", "نقرس", "آرتریت سپتیک", "استئوآرتریت"],
+                correct: 3
+            },
+            {
+                id: 13,
+                question: "خانم ۴۳ ساله‌ای به‌دلیل ۳ هفته ضعف پیشرونده مراجعه کرده است. بالا بردن دست برای شانه کردن مو و بالا رفتن از پله‌ها برایش سخت شده است. راش اطراف چشم‌ها (هلیوتروپ) و اریتم منتشر پشت فوقانی، پشت گردن و شانه‌ها دیده می‌شود. کدام آنتی‌بادی احتمالاً در این بیمار مثبت است؟",
+                options: ["آنتی‌سانترومر", "آنتی‌هیستون", "آنتی‌بادی کانال کلسیمی وابسته به ولتاژ", "آنتی Jo-1"],
+                correct: 3
+            },
+            {
+                id: 14,
+                question: "مرد ۵۴ ساله‌ای سابقه نقرس با چند حمله آرتریت نقرسی حاد و سه مورد سنگ کلیه ناشی از سنگ‌های اسیداوریکی دارد. اسیداوریک سرم ۱۱ و دفع ۲۴ ساعته اسیداوریک ۱۳۰۰ میلی‌گرم (بالا) است. کدام دارو باید در این بیمار اجتناب شود؟",
+                options: ["کلشی‌سین", "آلوپورینول", "ایندومتاسین", "پروبنسید"],
+                correct: 3
+            },
+            {
+                id: 15,
+                question: "مرد ۴۵ ساله با سابقه آرتریت نقرسی عودکننده برای پیگیری مراجعه کرده است. اخیراً آلوپورینول شروع شده اما باز هم حمله داشته است. ندول‌های گچی (توفوس) دارد. اسیداوریک سرم ۱۱.۶ و اسیداوریک ادرار ۲۴ ساعته ۲۴۵ (پایین) است. بر اساس یافته‌های ادراری، برای پیشگیری از حملات آینده، کدام دارو مناسب‌تر است؟",
+                options: ["پروبنسید", "پگلوتيکاز", "راسبوریکاز", "فبوکسوستات"],
+                correct: 3
+            },
+            {
+                id: 16,
+                question: "مرد ۵۶ ساله‌ای برای پیگیری مراجعه کرده است. سابقه حملات حاد نقرس دارد که با مسکن خوب شده‌اند. فعلاً دارویی مصرف نمی‌کند و الکل مصرف می‌کرده است. کراتینین سرم ۰٫۹ است. برای پیشگیری طولانی‌مدت از حملات بعدی، کدام دارو استاندارد و مناسب‌تر است؟",
+                options: ["پروبنسید", "آسپیرین", "پگلوتیکاز", "آلوپورینول"],
+                correct: 3
+            },
+            {
+                id: 17,
+                question: "خانم ۳۳ ساله‌ای مبتلا به کرون، قصد بارداری دارد. پزشک متوترکسات را قطع کرده و دارویی از دسته آنالوگ‌های پورین (مانند آزاتیوپرین) شروع می‌کند. سمیت این داروی جدید در صورت مصرف همزمان کدام دارو برای درمان نقرس احتمالی، به شدت افزایش می‌یابد؟",
+                options: ["فبوکسوستات", "پمتروکسد", "راسبوریکاز", "هیدروکسی‌اوره"],
+                correct: 0
+            },
+            {
+                id: 18,
+                question: "خانم ۳۵ ساله‌ای با علائم سندرم CREST و آنتی‌بادی ضد سانترومر مثبت مراجعه کرده است. تمام علائم و نشانه‌های زیر در این بیمار انتظار می‌رود به‌جز:",
+                options: ["رنگ‌پریدگی و سیانوز دست‌ها (رینود)", "ضایعات عروقی سفیدشونده (تلانژکتازی)", "وضعیت فوق‌انعقادی (Hypercoagulable state)", "سوزش سردل و ریفلاکس"],
+                correct: 2
+            }
+        ];
+
+        // متغیرهای وضعیت
+        let currentQuestionIndex = 0;
+        let userAnswers = new Array(questions.length).fill(null);
+        let timeLeft = 600; // 10 دقیقه به ثانیه
+        let timerInterval;
+        let isQuizFinished = false;
+
+        // انتخابگرها
+        const startScreen = document.getElementById('start-screen');
+        const quizContainer = document.getElementById('quiz-container');
+        const resultScreen = document.getElementById('result-screen');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const progressBar = document.getElementById('progress-bar');
+        const currentQNum = document.getElementById('current-q-num');
+        const totalQNum = document.getElementById('total-q-num');
+        const timerDisplay = document.getElementById('timer');
+        const nextBtn = document.getElementById('next-btn');
+
+        // شروع آزمون
+        function startQuiz() {
+            startScreen.classList.add('hidden');
+            quizContainer.classList.remove('hidden');
+            quizContainer.classList.add('flex');
+            
+            totalQNum.textContent = questions.length;
+            renderQuestion();
+            startTimer();
+        }
+
+        // تایمر
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    finishQuiz();
+                    return;
+                }
+                timeLeft--;
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // هشدار زمان کم
+            if(timeLeft < 60) {
+                timerDisplay.classList.add('text-red-200');
+                timerDisplay.parentElement.parentElement.classList.remove('bg-blue-600');
+                timerDisplay.parentElement.parentElement.classList.add('bg-red-600');
+            }
+        }
+
+        // نمایش سوال
+        function renderQuestion() {
+            const question = questions[currentQuestionIndex];
+            
+            // آپدیت متن
+            questionText.textContent = `${currentQuestionIndex + 1}. ${question.question}`;
+            currentQNum.textContent = currentQuestionIndex + 1;
+            
+            // آپدیت پروگرس بار
+            const progress = ((currentQuestionIndex) / questions.length) * 100;
+            progressBar.style.width = `${progress}%`;
+
+            // رندر گزینه‌ها
+            optionsContainer.innerHTML = '';
+            question.options.forEach((option, index) => {
+                const btn = document.createElement('button');
+                btn.className = `option-btn w-full text-right p-4 rounded-xl border-2 border-gray-200 text-gray-700 font-medium bg-white flex items-center gap-3`;
+                
+                // بررسی انتخاب قبلی
+                if (userAnswers[currentQuestionIndex] === index) {
+                    btn.classList.add('selected');
+                }
+
+                // دایره انتخاب (UI)
+                const circle = document.createElement('div');
+                circle.className = `w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${userAnswers[currentQuestionIndex] === index ? 'border-blue-600 bg-blue-600' : 'border-gray-300'}`;
+                if (userAnswers[currentQuestionIndex] === index) {
+                    circle.innerHTML = `<svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>`;
+                }
+                
+                btn.appendChild(circle);
+                
+                const textSpan = document.createElement('span');
+                textSpan.textContent = option;
+                btn.appendChild(textSpan);
+
+                btn.onclick = () => selectOption(index);
+                optionsContainer.appendChild(btn);
+            });
+
+            // تغییر متن دکمه در سوال آخر
+            if (currentQuestionIndex === questions.length - 1) {
+                nextBtn.innerHTML = `<span>پایان آزمون</span> <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
+                nextBtn.classList.remove('bg-gray-800', 'hover:bg-gray-900');
+                nextBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+            } else {
+                nextBtn.innerHTML = `<span>سوال بعد</span> <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transform rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>`;
+                nextBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                nextBtn.classList.add('bg-gray-800', 'hover:bg-gray-900');
+            }
+        }
+
+        // انتخاب گزینه
+        function selectOption(optionIndex) {
+            userAnswers[currentQuestionIndex] = optionIndex;
+            renderQuestion(); // بازنشانی برای نمایش استایل انتخاب شده
+        }
+
+        // سوال بعدی
+        function nextQuestion() {
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                renderQuestion();
+            } else {
+                finishQuiz();
+            }
+        }
+
+        // پایان آزمون
+        function finishQuiz() {
+            isQuizFinished = true;
+            clearInterval(timerInterval);
+            
+            quizContainer.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+            
+            calculateResults();
+        }
+
+        // محاسبه و نمایش نتایج
+        function calculateResults() {
+            let correctCount = 0;
+            let wrongCount = 0; // شامل نزده هم میشود برای سادگی UI
+            
+            const reviewContainer = document.getElementById('review-container');
+            reviewContainer.innerHTML = '';
+
+            questions.forEach((q, idx) => {
+                const userAnswer = userAnswers[idx];
+                const isCorrect = userAnswer === q.correct;
+                
+                if (isCorrect) correctCount++;
+                else wrongCount++;
+
+                // ساختن کارت مرور سوال
+                const card = document.createElement('div');
+                card.className = 'bg-white border rounded-xl p-4 shadow-sm';
+                
+                let statusBadge = '';
+                if (userAnswer === null) {
+                    statusBadge = '<span class="text-xs font-bold bg-gray-200 text-gray-600 px-2 py-1 rounded">بدون پاسخ</span>';
+                } else if (isCorrect) {
+                    statusBadge = '<span class="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded">صحیح</span>';
+                } else {
+                    statusBadge = '<span class="text-xs font-bold bg-red-100 text-red-700 px-2 py-1 rounded">غلط</span>';
+                }
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-bold text-gray-400 text-sm">سوال ${idx + 1}</span>
+                        ${statusBadge}
+                    </div>
+                    <p class="text-gray-800 font-medium mb-4 text-sm md:text-base">${q.question}</p>
+                    <div class="space-y-2 text-sm">
+                        ${q.options.map((opt, optIdx) => {
+                            let optionClass = 'p-3 rounded-lg border ';
+                            
+                            // منطق رنگ‌بندی پاسخنامه
+                            if (optIdx === q.correct) {
+                                // گزینه صحیح همیشه سبز است
+                                optionClass += 'bg-green-50 border-green-500 text-green-800';
+                            } else if (userAnswer === optIdx && !isCorrect) {
+                                // اگر کاربر غلط زده باشد، قرمز می‌شود
+                                optionClass += 'bg-red-50 border-red-500 text-red-800';
+                            } else {
+                                // بقیه گزینه‌ها
+                                optionClass += 'bg-white border-gray-100 text-gray-500';
+                            }
+
+                            return `<div class="${optionClass}">${opt} ${optIdx === q.correct ? '✅' : ''} ${userAnswer === optIdx && !isCorrect ? '❌' : ''}</div>`;
+                        }).join('')}
+                    </div>
+                `;
+                
+                reviewContainer.appendChild(card);
+            });
+
+            // نمایش آمار بالا
+            const percentage = Math.round((correctCount / questions.length) * 100);
+            document.getElementById('score-percentage').textContent = `${percentage}%`;
+            document.getElementById('score-correct').textContent = correctCount;
+            document.getElementById('score-wrong').textContent = wrongCount;
+            
+            // رنگ‌بندی نمره کل
+            const scoreEl = document.getElementById('score-percentage');
+            if (percentage >= 70) scoreEl.className = 'text-2xl font-bold text-green-600';
+            else if (percentage >= 50) scoreEl.className = 'text-2xl font-bold text-yellow-600';
+            else scoreEl.className = 'text-2xl font-bold text-red-600';
+        }
+
+    </script>
+</body>
+</html>
